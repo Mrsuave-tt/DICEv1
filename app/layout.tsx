@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "🎲 Color Dice Game",
   description: "Roll three color dice and test your luck!",
+  verification: {
+    google: "CdWtufSiyk289gY6Fp4s10ZVeJKqvV8rL0Bi5AxveX8",
+  },
 };
 
 export default function RootLayout({
