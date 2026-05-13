@@ -9,29 +9,44 @@ const DICE_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'] as co
 type DiceColor = (typeof DICE_COLORS)[number];
 
 interface ColorConfig {
+  label: string;
   hex: string;
   border: string;
-  label: string;
+  glow: string;
+  textClass: string;
 }
 
 const COLOR_CONFIG: Record<DiceColor, ColorConfig> = {
-  red:    { hex: '#e53e3e', border: '#c53030', label: 'Red'    },
-  orange: { hex: '#dd6b20', border: '#c05621', label: 'Orange' },
-  yellow: { hex: '#d69e2e', border: '#b7791f', label: 'Yellow' },
-  green:  { hex: '#38a169', border: '#276749', label: 'Green'  },
-  blue:   { hex: '#3182ce', border: '#2b6cb0', label: 'Blue'   },
-  purple: { hex: '#805ad5', border: '#6b46c1', label: 'Purple' },
+  red: { label: 'Red', hex: '#EF4444', border: '#F87171', glow: 'rgba(239,68,68,0.6)', textClass: 'text-red-400' },
+  orange: { label: 'Orange', hex: '#F97316', border: '#FB923C', glow: 'rgba(249,115,22,0.6)', textClass: 'text-orange-400' },
+  yellow: { label: 'Yellow', hex: '#EAB308', border: '#FDE047', glow: 'rgba(234,179,8,0.6)', textClass: 'text-yellow-300' },
+  green: { label: 'Green', hex: '#22C55E', border: '#4ADE80', glow: 'rgba(34,197,94,0.6)', textClass: 'text-green-400' },
+  blue: { label: 'Blue', hex: '#3B82F6', border: '#60A5FA', glow: 'rgba(59,130,246,0.6)', textClass: 'text-blue-400' },
+  purple: { label: 'Purple', hex: '#A855F7', border: '#C084FC', glow: 'rgba(168,85,247,0.6)', textClass: 'text-purple-400' },
 };
 
-// Display colours for the "Possible colors" strip (vivid, on white bg)
-const COLOR_TEXT: Record<DiceColor, string> = {
-  red: '#e53e3e', orange: '#dd6b20', yellow: '#ca8a04',
-  green: '#16a34a', blue: '#2563eb', purple: '#7c3aed',
-};
+// ── Random rolling phrases ───────────────────────────────────────────────────
+const ROLL_PHRASES = [
+  'Fingers Crossed..',
+  'Here We Go!',
+  'Come On Lucky!',
+  'Rolling The Fates..',
+  'Let It Ride!',
+  'Big Win Loading..',
+  'Don\'t Peek Yet..',
+  'Show Me The Money!',
+  'Destiny Decides..',
+  'Spin To Win!',
+  'Feel The Rush..',
+  'Lucky Numbers..',
+  'One More Time..',
+  'Make It Count!',
+  'The Dice Are Hot!',
+];
 
-const ROLL_DURATION_MS    = 1800;
-const SHUFFLE_INTERVAL_MS = 80;
-const MAX_HISTORY         = 20;
+const ROLL_DURATION_MS = 1600;
+const SHUFFLE_INTERVAL_MS = 60;
+const MAX_HISTORY = 30;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,6 +84,10 @@ function nowHMS(): string {
   return new Date().toLocaleTimeString('en-US', { hour12: false });
 }
 
+function pickPhrase(): string {
+  return ROLL_PHRASES[Math.floor(Math.random() * ROLL_PHRASES.length)];
+}
+
 // ─── Die ──────────────────────────────────────────────────────────────────────
 
 interface DieProps { color: DiceColor | null; rolling: boolean; index: number }
@@ -76,125 +95,154 @@ interface DieProps { color: DiceColor | null; rolling: boolean; index: number }
 function Die({ color, rolling, index }: DieProps) {
   const cfg = color ? COLOR_CONFIG[color] : null;
 
+  const boxShadow = cfg
+    ? `0 0 24px ${cfg.glow}, 0 0 60px ${cfg.glow.replace('0.6', '0.25')}, inset 0 1px 0 rgba(255,255,255,0.18)`
+    : 'inset 0 1px 0 rgba(255,255,255,0.04)';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+    <div className="flex flex-col items-center gap-3">
       <div
         id={`die-${index + 1}`}
         aria-label={rolling ? 'Rolling…' : color ? `Die ${index + 1}: ${cfg!.label}` : `Die ${index + 1}`}
+        className={[
+          'relative flex h-28 w-28 items-center justify-center rounded-[1.5rem] sm:h-32 sm:w-32',
+          'transition-all duration-150',
+          rolling ? 'scale-90 opacity-60 animate-pulse' : 'scale-100 opacity-100',
+        ].join(' ')}
         style={{
-          width: '100px', height: '100px',
-          borderRadius: '14px',
-          backgroundColor: cfg ? cfg.hex : '#ffffff',
-          border: `4px solid ${cfg ? '#ffffff' : '#bfdbfe'}`,
-          boxShadow: cfg
-            ? `0 4px 0 ${cfg.border}, 0 6px 20px rgba(0,0,0,0.18)`
-            : '0 4px 0 #93c5fd, 0 6px 16px rgba(0,0,0,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: rolling ? 'background-color 0.08s' : 'all 0.35s ease',
-          transform: rolling ? 'scale(0.94) rotate(-2deg)' : 'scale(1) rotate(0deg)',
-          cursor: 'default',
+          backgroundColor: cfg ? cfg.hex : 'rgba(255,255,255,0.03)',
+          border: `2px solid ${cfg ? cfg.border : 'rgba(255,255,255,0.07)'}`,
+          boxShadow,
         }}
       >
-        {/* centre dot */}
-        <span style={{
-          display: 'block', width: '20px', height: '20px',
-          borderRadius: '50%', backgroundColor: 'white',
-          boxShadow: cfg ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.1)',
-        }} />
+        <span
+          className="block h-5 w-5 rounded-full bg-white"
+          style={{ boxShadow: cfg ? `0 0 10px white, 0 0 20px ${cfg.glow}` : 'none', opacity: cfg ? 1 : 0.15 }}
+        />
       </div>
-
-      {/* colour label below die */}
-      <span style={{
-        fontSize: '13px', fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: cfg ? cfg.hex : '#93c5fd',
-        transition: 'color 0.3s',
-      }}>
+      <span className={[
+        'text-[11px] font-bold uppercase tracking-[0.2em] transition-colors duration-300',
+        cfg ? cfg.textClass : 'text-white/20',
+      ].join(' ')}>
         {rolling ? '· · ·' : cfg ? cfg.label : '—'}
       </span>
     </div>
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// ─── History Panel (side) ─────────────────────────────────────────────────────
 
-const DISCOVER_LEFT = [
-  'dice', 'Board Games', 'die', 'tabletop games', 'board games',
-  'Board & Card Games', 'Dice', 'DICE',
-];
-const DISCOVER_RIGHT = [
-  'Educational Dice Games', 'Custom Dice Roller', 'Dice Roller App',
-  'Color Dice Sets', 'games', 'Dice Game History',
-  'Dice Game Tutorials', 'Dice Game Tournaments',
-];
+interface HistoryPanelProps { entries: RollHistoryEntry[] }
 
-function Sidebar({ links }: { links: string[] }) {
+function HistoryPanel({ entries }: HistoryPanelProps) {
   return (
-    <div style={{
-      width: '170px', flexShrink: 0,
-      backgroundColor: '#ffffff',
-      borderRadius: '10px',
-      padding: '12px 14px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
-      alignSelf: 'flex-start',
-    }}>
-      <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#1e3a5f', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
-        Discover more
-      </p>
-      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' }}>
-        {links.map((l) => (
-          <li key={l} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '7px 0', borderBottom: '1px solid #f1f5f9',
-            fontSize: '13px', color: '#1d4ed8', cursor: 'pointer',
-            userSelect: 'none',
-          }}>
-            <span>{l}</span>
-            <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700 }}>›</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+    <div className={[
+      'relative flex w-full flex-col rounded-[2rem] lg:w-60 lg:self-stretch lg:min-h-0',
+      'border border-white/10 bg-white/[0.02] backdrop-blur-2xl',
+      'shadow-[0_32px_80px_rgba(0,0,0,0.6)] p-5',
+    ].join(' ')}>
+      {/* Inner top shine */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[2rem]"
+        style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)' }}
+      />
 
-// ─── History list ─────────────────────────────────────────────────────────────
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">
+          Triple Winner Log
+        </p>
+        {entries.length > 0 && (
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/25">
+            {entries.length}
+          </span>
+        )}
+      </div>
 
-function HistoryList({ entries }: { entries: RollHistoryEntry[] }) {
-  if (entries.length === 0) return null;
-  return (
-    <div style={{ borderTop: '2px solid #e0f2fe', padding: '12px 16px' }}>
-      <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#94a3b8' }}>
-        Triple Winner Log
-      </p>
-      <ul style={{ margin: 0, padding: 0, listStyle: 'none', maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-        {entries.map((e, idx) => (
-          <li key={e.id} style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '5px 8px', borderRadius: '8px',
-            background: idx === 0 ? '#eff6ff' : 'transparent',
-            border: idx === 0 ? '1px solid #bfdbfe' : '1px solid transparent',
-          }}>
-            {/* 3 mini dice */}
-            {e.dice.map((c, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '22px', height: '22px', borderRadius: '5px',
-                backgroundColor: COLOR_CONFIG[c].hex,
-                border: '2px solid white',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                flexShrink: 0,
-              }}>
-                <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'white' }} />
-              </span>
-            ))}
-            <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: COLOR_CONFIG[e.winner].hex, textTransform: 'uppercase' }}>
-              {e.isTriple ? `🎉 Triple ${COLOR_CONFIG[e.winner].label}!` : e.dice.map(c => COLOR_CONFIG[c].label).join(' · ')}
-            </span>
-            <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>{e.time}</span>
-          </li>
-        ))}
-      </ul>
+      {/* List */}
+      {entries.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8">
+          <span className="text-3xl opacity-20">🎲</span>
+          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-white/15">
+            No triples yet — keep rolling!
+          </p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-2 overflow-y-auto lg:max-h-[520px]
+                       [&::-webkit-scrollbar]:w-[3px]
+                       [&::-webkit-scrollbar-track]:bg-transparent
+                       [&::-webkit-scrollbar-thumb]:rounded-full
+                       [&::-webkit-scrollbar-thumb]:bg-white/10">
+          {entries.map((entry, idx) => {
+            const isLatest = idx === 0;
+            const wcfg = COLOR_CONFIG[entry.winner];
+            return (
+              <li
+                key={entry.id}
+                className={[
+                  'flex flex-col gap-2 rounded-xl px-3 py-3 transition-all duration-300',
+                  isLatest
+                    ? 'border border-white/10 bg-white/[0.05]'
+                    : 'border border-transparent bg-white/[0.015]',
+                ].join(' ')}
+              >
+                {/* 3 mini neon dice */}
+                <div className="flex items-center justify-center gap-2">
+                  {entry.dice.map((c, i) => {
+                    const dc = COLOR_CONFIG[c];
+                    return (
+                      <span
+                        key={i}
+                        className="flex h-[2.1rem] w-[2.1rem] items-center justify-center rounded-lg"
+                        style={{
+                          backgroundColor: dc.hex,
+                          border: `1.5px solid ${dc.border}`,
+                          boxShadow: isLatest ? `0 0 10px ${dc.glow}` : 'none',
+                        }}
+                      >
+                        <span className="block h-[7px] w-[7px] rounded-full bg-white" />
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {/* Labels + badges */}
+                <div className="flex items-center justify-between">
+                  {/* 3 colour names */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {entry.dice.map((c, i) => (
+                      <span
+                        key={i}
+                        className={['text-[8px] font-bold uppercase tracking-wide', COLOR_CONFIG[c].textClass].join(' ')}
+                      >
+                        {COLOR_CONFIG[c].label}{i < 2 ? ' ·' : ''}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {entry.isTriple && (
+                      <span className="rounded-full bg-amber-500/20 px-1.5 py-px text-[7px] font-black uppercase tracking-widest text-amber-400">
+                        Triple!
+                      </span>
+                    )}
+                    {isLatest && (
+                      <span className="rounded-full bg-purple-500/20 px-1.5 py-px text-[7px] font-black uppercase tracking-widest text-purple-400">
+                        Latest
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Time */}
+                <p className="text-right text-[8px] text-white/20">{entry.time}</p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -203,13 +251,14 @@ function HistoryList({ entries }: { entries: RollHistoryEntry[] }) {
 
 export default function GamePage() {
   const [secretForcedColor, setSecretForcedColor] = useState<string | null>(null);
-  const [dice, setDice]       = useState<[DiceColor, DiceColor, DiceColor] | null>(null);
+  const [dice, setDice] = useState<[DiceColor, DiceColor, DiceColor] | null>(null);
   const [rolling, setRolling] = useState(false);
   const [rollCount, setRollCount] = useState(0);
   const [history, setHistory] = useState<RollHistoryEntry[]>([]);
+  const [rollPhrase, setRollPhrase] = useState(ROLL_PHRASES[0]);
   const rollIdRef = useRef(0);
 
-  // ── Hydration-safe random init ──
+  // ── Hydration-safe init ──
   useEffect(() => {
     setDice([randomColor(), randomColor(), randomColor()]);
   }, []);
@@ -225,7 +274,9 @@ export default function GamePage() {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'game_settings', filter: 'id=eq.1' },
         (payload) => {
-          setSecretForcedColor((payload.new as { forced_color?: string | null }).forced_color ?? null);
+          setSecretForcedColor(
+            (payload.new as { forced_color?: string | null }).forced_color ?? null,
+          );
         })
       .subscribe();
 
@@ -235,6 +286,9 @@ export default function GamePage() {
   // ── Roll handler ──
   const handleRoll = useCallback(() => {
     if (rolling) return;
+
+    // Pick a new random phrase each roll
+    setRollPhrase(pickPhrase());
     setRolling(true);
 
     const shuffleId = setInterval(() => {
@@ -243,14 +297,15 @@ export default function GamePage() {
 
     setTimeout(() => {
       clearInterval(shuffleId);
-      const result   = resolveRoll(secretForcedColor);
+      const result = resolveRoll(secretForcedColor);
       const isTriple = result[0] === result[1] && result[1] === result[2];
-      const winner   = dominantColor(result);
+      const winner = dominantColor(result);
 
       setDice(result);
       setRolling(false);
       setRollCount(c => c + 1);
 
+      // Only log triples (all 3 dice the same colour)
       if (isTriple) {
         setHistory(prev => [{
           id: ++rollIdRef.current, dice: result, winner, isTriple, time: nowHMS(),
@@ -261,310 +316,208 @@ export default function GamePage() {
 
   const isTriple = dice && dice[0] === dice[1] && dice[1] === dice[2];
 
-  // ── Result text ──
-  let resultText: React.ReactNode = null;
-  if (rolling) {
-    resultText = (
-      <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#3182ce', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-        Rolling…
-      </p>
-    );
-  } else if (isTriple && dice) {
-    resultText = (
-      <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: COLOR_CONFIG[dice[0]].hex, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-        🎉 Triple {COLOR_CONFIG[dice[0]].label}!
-      </p>
-    );
-  } else if (dice && rollCount > 0) {
-    resultText = (
-      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#4a5568', letterSpacing: '0.06em' }}>
-        {dice.map(c => COLOR_CONFIG[c].label).join('  ·  ')}
-      </p>
-    );
-  }
-
   return (
-    <>
-      {/* Inject global styles + keyframes */}
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#07070a] px-4 py-14">
+
+      {/* ── Keyframes ─────────────────────────────────────────────────────────── */}
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: Arial, 'Helvetica Neue', sans-serif; }
-
-        /* Dice roll shake */
-        @keyframes diceShake {
-          0%,100% { transform: rotate(0deg) scale(0.94); }
-          25%      { transform: rotate(-6deg) scale(0.92); }
-          75%      { transform: rotate(6deg) scale(0.96); }
+        @keyframes fcBounce {
+          from { transform: translateY(0) scale(1); }
+          to   { transform: translateY(-16px) scale(1.08); }
         }
-
-        /* Overlay bounce */
-        @keyframes overlayBounce {
-          0%,100% { transform: translateY(0) scale(1); }
-          50%      { transform: translateY(-12px) scale(1.06); }
+        @keyframes fcPulse {
+          from { opacity: 0.3; transform: scale(0.8); }
+          to   { opacity: 1;   transform: scale(1.2); }
         }
-        @keyframes overlayPulse {
-          0%,100% { opacity: 0.4; transform: scale(0.85); }
-          50%      { opacity: 1;   transform: scale(1.15); }
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #bfdbfe; border-radius: 4px; }
-
-        /* Sidebar hide on mobile */
-        .sidebar { display: none; }
-        @media (min-width: 1024px) { .sidebar { display: block; } }
-
-        /* Roll button press */
-        #roll-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #92400e !important; }
       `}</style>
 
-      {/* ── FINGERS CROSSED OVERLAY ──────────────────────────────────────────── */}
+      {/* ── Ambient orbs ──────────────────────────────────────────────────────── */}
+      <div aria-hidden className="pointer-events-none absolute -left-56 -top-56 h-[600px] w-[600px] rounded-full bg-blue-700/20 blur-[150px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-56 -right-56 h-[600px] w-[600px] rounded-full bg-purple-800/20 blur-[150px]" />
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-600/[0.08] blur-[120px]" />
+
+      {/* ── ROLLING OVERLAY ───────────────────────────────────────────────────── */}
       <div
         aria-live="assertive"
         aria-label={rolling ? 'Rolling dice…' : undefined}
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 transition-opacity duration-200"
         style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px',
-          background: 'rgba(24,90,178,0.88)',
-          backdropFilter: 'blur(10px)',
+          background: 'rgba(7,7,10,0.88)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           opacity: rolling ? 1 : 0,
           pointerEvents: rolling ? 'all' : 'none',
-          transition: 'opacity 0.22s ease',
         }}
       >
-        <p style={{ margin: 0, fontSize: '11px', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
-          Rolling
-        </p>
-        <h2 style={{
-          margin: 0, fontSize: 'clamp(28px, 6vw, 48px)', fontWeight: 900, textTransform: 'uppercase',
-          letterSpacing: '0.07em', color: '#ffffff',
-          textShadow: '0 2px 20px rgba(255,255,255,0.3)',
-        }}>
-          Fingers Crossed..
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/30">Rolling</p>
+
+        {/* Random phrase — fades in each roll */}
+        <h2
+          key={rollPhrase}
+          className="bg-clip-text text-[clamp(2rem,6vw,3.5rem)] font-black uppercase tracking-[0.07em] text-transparent"
+          style={{
+            backgroundImage: 'linear-gradient(135deg,#e2e8f0 0%,#a78bfa 45%,#ec4899 80%,#f59e0b 100%)',
+            animation: 'fadeSlideIn 0.3s ease both',
+          }}
+        >
+          {rollPhrase}
         </h2>
 
-        {/* 3 bouncing white dice */}
-        <div style={{ display: 'flex', gap: '16px' }}>
+        {/* Bouncing dice */}
+        <div className="flex gap-5">
           {[0, 1, 2].map(i => (
-            <div key={i} style={{
-              width: '72px', height: '72px', borderRadius: '14px',
-              background: 'rgba(255,255,255,0.15)',
-              border: '3px solid rgba(255,255,255,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: `overlayBounce 0.65s ease-in-out ${i * 0.13}s infinite`,
-            }}>
-              <span style={{ display: 'block', width: '16px', height: '16px', borderRadius: '50%', background: 'white', opacity: 0.85 }} />
+            <div key={i}
+              className="flex h-20 w-20 items-center justify-center rounded-[1.1rem] border border-white/15"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                boxShadow: '0 0 30px rgba(139,92,246,0.2)',
+                animation: `fcBounce 0.6s ease-in-out ${i * 0.13}s infinite alternate`,
+              }}
+            >
+              <span className="block h-4 w-4 rounded-full bg-white/40" />
             </div>
           ))}
         </div>
 
-        {/* pulsing dots */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Pulsing dots */}
+        <div className="flex gap-2">
           {[0, 1, 2].map(i => (
-            <span key={i} style={{
-              display: 'block', width: '7px', height: '7px', borderRadius: '50%', background: 'white',
-              animation: `overlayPulse 0.75s ease-in-out ${i * 0.2}s infinite`,
-            }} />
+            <span key={i} className="block h-[7px] w-[7px] rounded-full bg-purple-400/70"
+              style={{ animation: `fcPulse 0.75s ease-in-out ${i * 0.2}s infinite alternate` }} />
           ))}
         </div>
       </div>
 
-      {/* ── PAGE SHELL ───────────────────────────────────────────────────────── */}
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(180deg, #4fc3f7 0%, #29b6f6 40%, #03a9f4 100%)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        padding: '24px 12px 40px',
-        position: 'relative', overflow: 'hidden',
-      }}>
+      {/* ── Possible colours banner ────────────────────────────────────────────── */}
+      <div className="relative z-10 mb-8 w-full max-w-3xl">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-3 backdrop-blur-md">
+          <span className="text-[11px] font-semibold tracking-widest text-white/35 uppercase">Possible colors:</span>
+          {DICE_COLORS.map((c, i) => {
+            const cfg = COLOR_CONFIG[c];
+            return (
+              <span key={c} className="flex items-center gap-1">
+                <span className={`text-[11px] font-extrabold tracking-wide ${cfg.textClass}`}
+                  style={{ textShadow: `0 0 12px ${cfg.glow}` }}>
+                  {cfg.label}
+                </span>
+                {i < DICE_COLORS.length - 1 && <span className="text-white/20 text-[11px]">,</span>}
+              </span>
+            );
+          })}
+        </div>
+      </div>
 
-        {/* Watermark dice pattern */}
-        <div aria-hidden style={{
-          position: 'absolute', inset: 0, opacity: 0.06, pointerEvents: 'none',
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect x='10' y='10' width='26' height='26' rx='5' fill='none' stroke='white' stroke-width='2.5'/%3E%3Ccircle cx='23' cy='23' r='3.5' fill='white'/%3E%3Crect x='44' y='44' width='26' height='26' rx='5' fill='none' stroke='white' stroke-width='2.5'/%3E%3Ccircle cx='52' cy='52' r='3' fill='white'/%3E%3Ccircle cx='62' cy='62' r='3' fill='white'/%3E%3C/svg%3E")`,
-          backgroundSize: '80px 80px',
-        }} />
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      <div className="relative z-10 mb-10 text-center">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.4em] text-purple-400/60">
+          Provably Fair · Live Game
+        </p>
+        <h1
+          className="bg-clip-text text-5xl font-black uppercase tracking-[0.3em] text-transparent sm:text-6xl"
+          style={{ backgroundImage: 'linear-gradient(135deg,#f1f5f9 0%,#94a3b8 50%,#cbd5e1 100%)' }}
+        >
+          Color Dice
+        </h1>
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-slate-600">
+          Roll · Win · Repeat
+        </p>
+      </div>
 
-        {/* ── 3-COL LAYOUT ─────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: '14px', width: '100%', maxWidth: '980px', position: 'relative', zIndex: 1, alignItems: 'flex-start' }}>
+      {/* ── Two-column layout: [Game Card] + [History Panel] ─────────────────── */}
+      <div className="relative z-10 flex w-full max-w-3xl flex-col items-start gap-5 lg:flex-row lg:items-stretch">
 
-          {/* Left sidebar */}
-          <div className="sidebar">
-            <Sidebar links={DISCOVER_LEFT} />
-          </div>
+        {/* ── Game Card ─────────────────────────────────────────────────────── */}
+        <div className="relative flex-1 w-full">
+          {/* Top shine */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[2rem]"
+            style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)' }} />
 
-          {/* ── CENTER GAME CARD ───────────────────────────────────────────── */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0' }}>
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '14px',
-              border: '3px solid #29b6f6',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-              overflow: 'hidden',
-            }}>
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl sm:p-10">
 
-              {/* ── Title ── */}
-              <div style={{ padding: '18px 20px 14px', textAlign: 'center', borderBottom: '2px solid #e0f7fa' }}>
-                <h1 style={{
-                  margin: 0, fontSize: '22px', fontWeight: 900, textTransform: 'uppercase',
-                  letterSpacing: '0.1em', color: '#0288d1',
-                }}>
-                  Roll Color Dice
-                </h1>
-              </div>
+            {/* Dice */}
+            <div id="dice-area"
+              aria-live="polite" aria-atomic="true"
+              className="flex items-center justify-center gap-6 sm:gap-8">
+              {[0, 1, 2].map(i => (
+                <Die key={i} index={i} color={dice ? dice[i] : null} rolling={rolling} />
+              ))}
+            </div>
 
-              {/* ── Selector row ── */}
-              <div style={{
-                display: 'flex', gap: '8px', padding: '10px 16px',
-                background: '#f0f9ff', borderBottom: '1px solid #b3e5fc', flexWrap: 'wrap',
-              }}>
-                {[
-                  { default: '3 Dice',    opts: ['1 Die', '2 Dice', '3 Dice', '4 Dice', '5 Dice', '6 Dice'] },
-                  { default: 'Color Dice', opts: ['Color Dice', 'Number Dice', 'Custom Dice'] },
-                  { default: 'No Bets',   opts: ['No Bets', 'With Bets'] },
-                ].map((s, idx) => (
-                  <select
-                    key={idx}
-                    defaultValue={s.default}
-                    style={{
-                      flex: '1 1 120px',
-                      padding: '7px 10px',
-                      border: '2px solid #29b6f6',
-                      borderRadius: '8px',
-                      background: 'white',
-                      color: '#0277bd',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      outline: 'none',
-                    }}
-                  >
-                    {s.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                ))}
-              </div>
-
-              {/* ── Dice area ── */}
-              <div
-                id="dice-area"
-                aria-live="polite"
-                aria-atomic="true"
-                style={{
-                  display: 'flex', justifyContent: 'center', alignItems: 'center',
-                  gap: '20px', padding: '28px 20px 18px',
-                  background: 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%)',
-                }}
-              >
-                {[0, 1, 2].map(i => (
-                  <Die key={i} index={i} color={dice ? dice[i] : null} rolling={rolling} />
-                ))}
-              </div>
-
-              {/* ── Result line ── */}
-              <div style={{ minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: '6px' }}>
-                {resultText ?? (
-                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    Press Roll to start
-                  </p>
-                )}
-              </div>
-
-              {/* ── Winner log ── */}
-              <HistoryList entries={history} />
-
-              {/* ── Roll button ── */}
-              <div style={{ padding: '12px 16px 14px' }}>
-                <button
-                  id="roll-btn"
-                  onClick={handleRoll}
-                  disabled={rolling}
-                  aria-busy={rolling}
-                  style={{
-                    display: 'block', width: '100%',
-                    padding: '15px',
-                    border: 'none', borderRadius: '10px',
-                    background: rolling
-                      ? 'linear-gradient(180deg, #fde68a 0%, #fcd34d 100%)'
-                      : 'linear-gradient(180deg, #fde047 0%, #facc15 100%)',
-                    color: '#78350f',
-                    fontSize: '18px', fontWeight: 900,
-                    textTransform: 'uppercase', letterSpacing: '0.12em',
-                    cursor: rolling ? 'not-allowed' : 'pointer',
-                    boxShadow: rolling
-                      ? '0 2px 0 #b45309, 0 4px 12px rgba(234,179,8,0.25)'
-                      : '0 5px 0 #b45309, 0 8px 20px rgba(234,179,8,0.35)',
-                    transform: rolling ? 'translateY(3px)' : 'none',
-                    transition: 'all 0.12s ease',
-                    userSelect: 'none',
-                  }}
-                >
-                  {rolling ? 'Rolling...' : rollCount === 0 ? '🎲  Roll !' : '🎲  Roll Again !'}
-                </button>
-
-                {rollCount > 0 && (
-                  <p style={{ margin: '8px 0 0', textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                    {rollCount} {rollCount === 1 ? 'roll' : 'rolls'} total
-                  </p>
-                )}
-              </div>
-
-              {/* ── Possible colours strip ── */}
-              <div style={{
-                padding: '12px 16px',
-                borderTop: '1px solid #e0f2fe',
-                background: '#f8fbff',
-                fontSize: '13px', color: '#475569', lineHeight: '1.6',
-                textAlign: 'center',
-              }}>
-                <span style={{ fontWeight: 600 }}>Possible colors are: </span>
-                {DICE_COLORS.map((c, i) => (
-                  <span key={c}>
-                    <span style={{ color: COLOR_TEXT[c], fontWeight: 700 }}>{COLOR_CONFIG[c].label}</span>
-                    {i < DICE_COLORS.length - 1 ? (i === DICE_COLORS.length - 2 ? ' and ' : ', ') : '.'}
+            {/* Result caption */}
+            <div className="mt-7 flex min-h-[30px] items-center justify-center">
+              {rolling ? (
+                <p className="animate-pulse text-[11px] font-bold uppercase tracking-[0.3em] text-purple-400/70">
+                  Determining outcome…
+                </p>
+              ) : isTriple && dice ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎉</span>
+                  <span className="bg-clip-text text-sm font-black uppercase tracking-widest text-transparent"
+                    style={{ backgroundImage: 'linear-gradient(90deg,#f59e0b,#ec4899,#a855f7)' }}>
+                    Triple {COLOR_CONFIG[dice[0]].label}!
                   </span>
-                ))}
-              </div>
+                  <span className="text-xl">🎉</span>
+                </div>
+              ) : dice && rollCount > 0 ? (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/25">
+                  {dice.map(c => COLOR_CONFIG[c].label).join('  ·  ')}
+                </p>
+              ) : (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/15">
+                  Press below to roll
+                </p>
+              )}
+            </div>
 
-              {/* ── Change Theme dropdown ── */}
-              <div style={{
-                padding: '10px 16px 14px',
-                borderTop: '1px solid #e0f2fe',
-                background: '#f8fbff',
-                display: 'flex', justifyContent: 'center',
-              }}>
-                <select style={{
-                  padding: '6px 14px',
-                  border: '2px solid #29b6f6',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#0277bd',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  cursor: 'pointer',
-                }}>
-                  <option>Change Theme</option>
-                  <option>Classic Blue</option>
-                  <option>Dark Mode</option>
-                  <option>Neon</option>
-                </select>
-              </div>
+            {/* Divider */}
+            <div className="my-7 h-px w-full"
+              style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.07),transparent)' }} />
 
-            </div>{/* end white card */}
-          </div>{/* end center column */}
+            {/* Roll button */}
+            <button
+              id="roll-button"
+              onClick={handleRoll}
+              disabled={rolling}
+              aria-busy={rolling}
+              className={[
+                'w-full rounded-2xl py-5',
+                'bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600',
+                'text-sm font-extrabold uppercase tracking-[0.35em] text-white',
+                'transition-all duration-200',
+                rolling
+                  ? 'cursor-not-allowed scale-[0.98] opacity-50'
+                  : [
+                    'hover:scale-[1.02] active:scale-[0.98]',
+                    'hover:shadow-[0_0_40px_rgba(79,70,229,0.45),0_0_80px_rgba(168,85,247,0.2)]',
+                    'hover:brightness-110',
+                  ].join(' '),
+              ].join(' ')}
+              style={rolling ? {} : { boxShadow: '0 4px 24px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.12)' }}
+            >
+              {rolling ? 'Rolling…' : rollCount === 0 ? '🎲  Roll Dice' : '🎲  Roll Again'}
+            </button>
 
-          {/* Right sidebar */}
-          <div className="sidebar">
-            <Sidebar links={DISCOVER_RIGHT} />
+            {rollCount > 0 && (
+              <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-white/20">
+                {rollCount} {rollCount === 1 ? 'Roll' : 'Rolls'}
+              </p>
+            )}
           </div>
+        </div>
 
-        </div>{/* end 3-col */}
-      </div>{/* end page shell */}
-    </>
+        {/* ── History Panel (side) ───────────────────────────────────────────── */}
+        <HistoryPanel entries={history} />
+
+      </div>
+
+      {/* ── Footer ────────────────────────────────────────────────────────────── */}
+      <p className="relative z-10 mt-10 text-center text-[10px] font-medium uppercase tracking-[0.25em] text-white/10">
+        © 2026 dice-ph.vercel.app
+      </p>
+    </div>
   );
 }
